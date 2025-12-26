@@ -1,0 +1,70 @@
+.exam-container {
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
+}
+
+.exam-header {
+  text-align: right;
+  margin-bottom: 10px;
+}
+
+.timer {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.section-buttons {
+  margin-bottom: 20px;
+}
+
+.section-buttons .btn {
+  margin-right: 10px;
+}
+
+.section-buttons .active {
+  background: green;
+  color: white;
+}
+
+.question-box {
+  background: #f9f9f9;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+.option {
+  display: block;
+  margin: 10px 0;
+  cursor: pointer;
+}
+
+.option input {
+  margin-right: 10px;
+}
+
+.nav-buttons {
+  margin-bottom: 20px;
+}
+
+button {
+  padding: 10px 20px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.btn {
+  background: blue;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+
+.btn.danger {
+  background: red;
+}
+
+.section-btn {
+  margin-top: 20px;
+}
