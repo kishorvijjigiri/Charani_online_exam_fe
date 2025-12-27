@@ -1,18 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// Import Bootstrap Components
-import { Container, Table, Form, Row, Col, Card, Spinner, Navbar } from 'react-bootstrap';
+import { Container, Table, Form, Row, Col, Card, Spinner, Navbar, Button } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
 import logo from "./Assets/charani logo.webp"; 
 
 const ResultBoard = () => {
+    // Auth States
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
+    
+    // Data States
     const [results, setResults] = useState([]);
     const [emailFilter, setEmailFilter] = useState('');
     const [percentFilter, setPercentFilter] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Handle HR Login
+    const handleSignIn = (e) => {
+        e.preventDefault();
+        if (loginEmail === "Charani.Hr@gmail.com" && loginPassword === "hr@12345") {
+            setIsAuthenticated(true);
+        } else {
+            alert("Invalid HR Credentials!");
+        }
+    };
+
     const fetchResults = async () => {
+        if (!isAuthenticated) return;
         setLoading(true);
         try {
             const minPct = percentFilter === '' ? 0 : percentFilter;
@@ -30,41 +45,95 @@ const ResultBoard = () => {
         }
     };
 
-    // UseEffect with 300ms debounce to prevent excessive API calls
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            fetchResults();
-        }, 300);
-        return () => clearTimeout(timeoutId);
-    }, [emailFilter, percentFilter]);
+        if (isAuthenticated) {
+            const timeoutId = setTimeout(() => {
+                fetchResults();
+            }, 300);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [emailFilter, percentFilter, isAuthenticated]);
 
+    // 1. SIGN IN VIEW
+    if (!isAuthenticated) {
+        return (
+            <div style={{ backgroundColor: "#f4f7f6", minHeight: "100vh" }}>
+                <Navbar style={{ backgroundColor: "#3216e8" }} variant="dark" className="shadow-sm mb-5">
+                    <Container>
+                        <Navbar.Brand className="d-flex align-items-center">
+                            <img src={logo} alt="Logo" width="40" height="40" className="me-2 bg-white rounded-circle p-1" />
+                            <span className="fw-bold">CHARANI INFOTECH</span>
+                        </Navbar.Brand>
+                    </Container>
+                </Navbar>
+                <Container>
+                    <Row className="justify-content-center">
+                        <Col md={5}>
+                            <Card className="border-0 shadow-lg rounded-4 mt-5">
+                                <Card.Body className="p-5">
+                                    <div className="text-center mb-4">
+                                        <h2 className="fw-bold text-dark">HR Portal</h2>
+                                        <p className="text-muted">Please sign in to access results</p>
+                                    </div>
+                                    <Form onSubmit={handleSignIn}>
+                                        <Form.Group className="mb-3" controlId="hrEmail">
+                                            <Form.Label className="fw-semibold">HR Email</Form.Label>
+                                            <Form.Control 
+                                                type="email" 
+                                                placeholder="Enter Your Email" 
+                                                value={loginEmail}
+                                                onChange={(e) => setLoginEmail(e.target.value)}
+                                                required 
+                                            />
+                                        </Form.Group>
+                                        <Form.Group className="mb-4" controlId="hrPassword">
+                                            <Form.Label className="fw-semibold">Password</Form.Label>
+                                            <Form.Control 
+                                                type="password" 
+                                                placeholder="••••••••" 
+                                                value={loginPassword}
+                                                onChange={(e) => setLoginPassword(e.target.value)}
+                                                required 
+                                            />
+                                        </Form.Group>
+                                        <Button 
+                                            type="submit" 
+                                            className="w-100 py-2 fw-bold" 
+                                            style={{ backgroundColor: "#3216e8", border: "none" }}
+                                        >
+                                            Sign In
+                                        </Button>
+                                    </Form>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
+                </Container>
+            </div>
+        );
+    }
+
+    // 2. DASHBOARD VIEW (Shown after Auth)
     return (
-        <>
+        <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
             <Navbar style={{ backgroundColor: "#3216e8" }} variant="dark" className="shadow-sm mb-4">
                 <Container>
-                    <Navbar.Brand href="#" className="d-flex align-items-center">
-                        <img
-                            src={logo}
-                            alt="Charani Logo"
-                            width="40"
-                            height="40"
-                            className="d-inline-block align-top me-2"
-                            style={{ borderRadius: "50%", backgroundColor: "white" }}
-                        />
-                        <span className="fw-bold text-white">CHARANI INFOTECH</span>
+                    <Navbar.Brand className="d-flex align-items-center">
+                        <img src={logo} alt="Logo" width="40" height="40" className="me-2 bg-white rounded-circle p-1" />
+                        <span className="fw-bold">CHARANI INFOTECH</span>
                     </Navbar.Brand>
+                    <Button variant="outline-light" size="sm" onClick={() => setIsAuthenticated(false)}>Logout</Button>
                 </Container>
             </Navbar>
 
             <Container className="mt-4">
-                <Card className="shadow-sm">
-                    <Card.Header className="bg-light">
-                        <h3 className="mb-0 text-dark">Candidate Result Dashboard</h3>
+                <Card className="shadow-sm border-0 rounded-3">
+                    <Card.Header className="bg-white py-3 border-bottom">
+                        <h4 className="mb-0 fw-bold text-dark text-center">Candidate Result Dashboard</h4>
                     </Card.Header>
-                    <Card.Body>
-                        {/* Filter Section */}
+                    <Card.Body className="p-4">
                         <Form className="mb-4">
-                            <Row>
+                            <Row className="g-3">
                                 <Col md={6}>
                                     <Form.Group controlId="emailSearch">
                                         <Form.Label className="fw-semibold">Search by Email</Form.Label>
@@ -90,15 +159,15 @@ const ResultBoard = () => {
                             </Row>
                         </Form>
 
-                        {/* Table Section */}
                         {loading ? (
-                            <div className="text-center my-4">
-                                <Spinner animation="border" variant="secondary" />
+                            <div className="text-center my-5">
+                                <Spinner animation="border" style={{ color: "#3216e8" }} />
+                                <p className="mt-2 text-muted">Updating results...</p>
                             </div>
                         ) : (
-                            <Table bordered hover responsive className="mb-0">
-                                <thead className="bg-light">
-                                    <tr>
+                            <Table bordered hover responsive className="mb-0 align-middle">
+                                <thead className="table-light">
+                                    <tr className="text-center">
                                         <th>Email</th>
                                         <th>Aptitude</th>
                                         <th>Reasoning</th>
@@ -110,18 +179,22 @@ const ResultBoard = () => {
                                 <tbody>
                                     {results.length > 0 ? (
                                         results.map((res) => (
-                                            <tr key={res.id}>
-                                                <td>{res.candidateEmail}</td>
+                                            <tr key={res.id} className="text-center">
+                                                <td className="text-start px-3">{res.candidateEmail}</td>
                                                 <td>{res.aptitudeCorrect}</td>
                                                 <td>{res.reasoningCorrect}</td>
                                                 <td>{res.communicationCorrect}</td>
                                                 <td>{res.totalCorrect} / 60</td>
-                                                <td className="fw-bold">{res.percentage}%</td>
+                                                <td>
+                                                    <span  style={{fontSize: "0.9rem"}}>
+                                                        {res.percentage}%
+                                                    </span>
+                                                </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan="6" className="text-center py-4 text-muted">
+                                            <td colSpan="6" className="text-center py-5 text-muted italic">
                                                 No results found matching your criteria.
                                             </td>
                                         </tr>
@@ -132,7 +205,10 @@ const ResultBoard = () => {
                     </Card.Body>
                 </Card>
             </Container>
-        </>
+            <footer className="text-center py-4 text-muted small">
+                © 2025 Charani Infotech Pvt Ltd. All rights reserved.
+            </footer>
+        </div>
     );
 };
 

@@ -2,7 +2,7 @@ import { Container, Button, Card, Row, Col, Navbar } from "react-bootstrap";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import logo from "./Assets/charani logo.webp"; 
+import logo from "./Assets/charani logo.webp";
 
 const SECTIONS = [
   { key: "APTITUDE", label: "Aptitude" },
@@ -15,33 +15,30 @@ function Exam() {
   const candidate = useMemo(() => JSON.parse(localStorage.getItem("candidate") || "null"), []);
 
   const [sectionIndex, setSectionIndex] = useState(0);
-  const [questions, setQuestions] = useState([]); 
+  const [questions, setQuestions] = useState([]);
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [visited, setVisited] = useState(new Set()); 
-  const [time, setTime] = useState(3600);
+  const [visited, setVisited] = useState(new Set());
+  const [time, setTime] = useState(3600); // 60 minutes
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     if (!candidate) navigate("/register");
   }, [candidate, navigate]);
 
-  // Track visited questions
   useEffect(() => {
     if (questions[qIndex]) {
       setVisited(prev => new Set(prev).add(questions[qIndex].id));
     }
   }, [qIndex, questions]);
 
-  // TIMER
   useEffect(() => {
     if (submitted) return;
     const timer = setInterval(() => {
       setTime(t => {
-        if (t <= 1 && !submitted) {
+        if (t <= 1) {
           clearInterval(timer);
-          setSubmitted(true);
-          handleFinalSubmission();
+          autoSubmit();
           return 0;
         }
         return t - 1;
@@ -50,56 +47,60 @@ function Exam() {
     return () => clearInterval(timer);
   }, [submitted]);
 
-  // FETCH QUESTIONS
   useEffect(() => {
     if (!candidate?.email) return;
     axios.get(`http://localhost:8080/api/questions/${SECTIONS[sectionIndex].key}`, {
-        params: { email: candidate.email } 
+      params: { email: candidate.email }
     })
-    .then(res => {
+      .then(res => {
         setQuestions(res.data);
         setQIndex(0);
-    })
-    .catch(err => console.error("Error fetching questions:", err));
+      })
+      .catch(err => console.error("Error fetching questions:", err));
   }, [sectionIndex, candidate?.email]);
-
-  const q = questions[qIndex];
 
   const selectOption = (qid, option) => {
     setAnswers(prev => ({ ...prev, [qid]: option }));
   };
 
-  // UPDATED LOGIC FOR ALERT ON COMPLETION
-  const handleNext = () => {
-    if (qIndex < questions.length - 1) {
-      setQIndex(qIndex + 1);
-    } else {
-      if (sectionIndex < SECTIONS.length - 1) {
-        setSectionIndex(sectionIndex + 1);
-      } else {
-        // Updated Alert message as requested
-        alert("You have reached the end of the exam. Please click on the Final Submit button to end your test.");
-      }
-    }
+  const autoSubmit = () => {
+    setSubmitted(true);
+    processSubmission();
   };
 
   const handleFinalSubmission = () => {
-    if (submitted) return;
-    if (!window.confirm("Are you sure you want to submit the entire test?")) return;
-    setSubmitted(true);
+    if (window.confirm("Are you sure you want to submit the entire test? You cannot change your answers after this.")) {
+      setSubmitted(true);
+      processSubmission();
+    }
+  };
+
+  const processSubmission = () => {
     const answerList = Object.keys(answers).map(qid => ({
       questionId: Number(qid),
       selectedOption: answers[qid]
     }));
+
     axios.post("http://localhost:8080/api/result/submit", {
       candidateEmail: candidate.email,
       answers: answerList
     })
-    .then(() => navigate(`/result/${candidate.email}`))
-    .catch(() => {
-        alert("Submission failed");
+      .then(() => navigate(`/result/${candidate.email}`))
+      .catch(() => {
+        alert("Submission failed. Please check your connection.");
         setSubmitted(false);
-    });
+      });
+  };
+
+  const q = questions[qIndex];
+
+  // LOGIC FOR BUTTONS
+  const isLastQuestionOfSection = qIndex === questions.length - 1;
+  const isLastSection = sectionIndex === SECTIONS.length - 1;
+
+  // REMOVED ALERT: Transitions immediately
+  const goToNextSection = () => {
+    setSectionIndex(sectionIndex + 1);
   };
 
   return (
@@ -120,19 +121,26 @@ function Exam() {
         <Row>
           <Col lg={8}>
             <div className="d-flex justify-content-between align-items-center mb-3">
-               <h4 className="text-dark">Online Examination</h4>
-               <h5 className={time < 300 ? "text-danger fw-bold" : "text-primary"}>
-                Time Left: {Math.floor(time / 60)}:{String(time % 60).padStart(2, "0")}
-               </h5>
+              <h4 className="text-dark fw-bold">Online Assessment</h4>
+              <h5 className={time < 300 ? "text-danger fw-bold" : "text-primary fw-bold"}>
+                ⏳ Time Left: {Math.floor(time / 60)}:{String(time % 60).padStart(2, "0")}
+              </h5>
             </div>
 
+            {/* Section Tabs */}
             <Row className="mb-4 g-2">
               {SECTIONS.map((s, i) => (
                 <Col key={s.key}>
-                  <Button 
-                    className="w-100 fw-bold py-2 shadow-sm" 
-                    variant={i === sectionIndex ? "primary" : "outline-primary"} 
-                    onClick={() => setSectionIndex(i)}
+                  <Button
+                    className="w-100 fw-bold py-2 shadow-sm border-2"
+                    variant={i === sectionIndex ? "primary" : "outline-primary"}
+                    onClick={() => {
+                        if(!submitted) {
+                            setSectionIndex(i);
+                            setQIndex(0);
+                        }
+                    }}
+                    disabled={submitted}
                   >
                     {s.label}
                   </Button>
@@ -140,82 +148,121 @@ function Exam() {
               ))}
             </Row>
 
-            {q && (
-              <Card className="p-4 shadow border-0">
+            {q ? (
+              <Card className="p-4 shadow border-0 rounded-3">
                 <div className="d-flex justify-content-between text-muted border-bottom pb-2 mb-3">
-                   <span className="fw-bold text-uppercase">{SECTIONS[sectionIndex].label} Section</span>
-                   <span>Question {qIndex + 1} / {questions.length}</span>
+                  <span className="fw-bold text-primary text-uppercase small tracking-wider">{SECTIONS[sectionIndex].label} Section</span>
+                  <span>Question {qIndex + 1} of {questions.length}</span>
                 </div>
-                <h5 className="mb-4" style={{lineHeight: '1.6'}}>{q.question}</h5>
+                
+                <h5 className="mb-4 fw-normal" style={{ lineHeight: '1.7' }}>{q.question}</h5>
+                
                 <Row className="g-3">
                   {["A", "B", "C", "D"].map(op => (
                     <Col md={6} key={op}>
-                      <Button 
-                        className="w-100 text-start p-3 shadow-sm" 
-                        variant={answers[q.id] === op ? "success" : "outline-secondary"} 
+                      <Button
+                        className="w-100 text-start p-3 shadow-sm"
+                        variant={answers[q.id] === op ? "success" : "outline-secondary"}
                         onClick={() => selectOption(q.id, op)}
+                        disabled={submitted}
                       >
                         <b className="me-2">{op}.</b> {q[`option${op}`]}
                       </Button>
                     </Col>
                   ))}
                 </Row>
-                <div className="d-flex justify-content-between mt-5 pt-3 border-top">
-                  <Button variant="secondary" className="px-4" disabled={qIndex === 0} onClick={() => setQIndex(qIndex - 1)}>Previous</Button>
-                  <Button variant="primary" className="px-4" onClick={handleNext}>
-                    {qIndex === questions.length - 1 && sectionIndex === SECTIONS.length -1 ? "Finish Exam" : "Next"}
+
+                <div className="d-flex justify-content-between mt-5 pt-4 border-top">
+                  <Button 
+                    variant="outline-secondary" 
+                    className="px-4 fw-bold" 
+                    disabled={qIndex === 0 || submitted} 
+                    onClick={() => setQIndex(qIndex - 1)}
+                  >
+                    ← Previous
                   </Button>
+                  
+                  {!isLastQuestionOfSection ? (
+                    <Button 
+                      variant="primary" 
+                      className="px-5 fw-bold" 
+                      onClick={() => setQIndex(qIndex + 1)}
+                      disabled={submitted}
+                    >
+                      Next Question →
+                    </Button>
+                  ) : !isLastSection ? (
+                    <Button 
+                      variant="warning" 
+                      className="px-5 fw-bold shadow-sm" 
+                      onClick={goToNextSection}
+                      disabled={submitted}
+                    >
+                      Next Section ({SECTIONS[sectionIndex + 1].label}) →
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="danger" 
+                      className="px-5 fw-bold shadow-sm" 
+                      onClick={handleFinalSubmission}
+                      disabled={submitted}
+                    >
+                      Submit Entire Test
+                    </Button>
+                  )}
                 </div>
               </Card>
+            ) : (
+              <div className="text-center p-5">Loading questions...</div>
             )}
           </Col>
 
           <Col lg={4}>
             <Card className="shadow border-0 position-sticky" style={{ top: "20px" }}>
               <Card.Header className="bg-primary text-white fw-bold py-3 text-center text-uppercase">
-                {SECTIONS[sectionIndex].label}
+                Question Palette
               </Card.Header>
-              <Card.Body className="p-4">
+              <Card.Body className="p-4 text-center">
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
                   {questions.map((item, idx) => {
-                    let btnVariant = "outline-dark"; // BLACK OUTLINE FOR NOT VISITED
-                    let textClass = "text-dark";
-
-                    if (qIndex === idx) {
-                        btnVariant = "primary"; // Blue
-                        textClass = "text-white";
-                    } else if (answers[item.id]) {
-                        btnVariant = "success"; // Green
-                        textClass = "text-white";
-                    } else if (visited.has(item.id)) {
-                        btnVariant = "warning"; // Orenge
-                        textClass = "text-white";
-                    }
+                    let btnVariant = "outline-dark";
+                    if (qIndex === idx) btnVariant = "primary";
+                    else if (answers[item.id]) btnVariant = "success";
+                    else if (visited.has(item.id)) btnVariant = "warning";
 
                     return (
                       <Button
                         key={item.id}
                         variant={btnVariant}
-                        className={`fw-bold ${textClass}`}
-                        style={{ height: "45px" }}
+                        className="fw-bold"
+                        style={{ height: "45px", width: "100%" }}
                         onClick={() => setQIndex(idx)}
+                        disabled={submitted}
                       >
                         {idx + 1}
                       </Button>
                     );
                   })}
                 </div>
+
                 <hr className="my-4" />
-                <Button variant="danger" size="lg" className="w-100 fw-bold shadow-sm py-2" onClick={handleFinalSubmission}>
-                    FINAL SUBMIT
+
+                <Button 
+                  variant="danger" 
+                  size="lg" 
+                  className="w-100 fw-bold shadow-lg py-3 mb-3" 
+                  onClick={handleFinalSubmission}
+                  disabled={submitted}
+                >
+                  FINAL SUBMIT
                 </Button>
 
-                <div className="mt-4 p-3 bg-light rounded small">
-                    <h6 className="fw-bold text-muted mb-2 small">LEGEND:</h6>
-                    <div className="d-flex align-items-center mb-1"><div className="bg-primary me-2 rounded" style={{width:12,height:12}}></div> Active</div>
-                    <div className="d-flex align-items-center mb-1"><div className="bg-success me-2 rounded" style={{width:12,height:12}}></div> Answered</div>
-                    <div className="d-flex align-items-center mb-1"><div className="bg-warning me-2 rounded" style={{width:12,height:12}}></div> Not Answered</div>
-                    <div className="d-flex align-items-center"><div className="border border-dark me-2 rounded" style={{width:12,height:12}}></div> Not Visited</div>
+                <div className="p-3 bg-light rounded shadow-sm text-start">
+                  <h6 className="fw-bold text-muted mb-3 small">INDICATORS</h6>
+                  <div className="d-flex align-items-center mb-2"><div className="bg-primary me-2 rounded" style={{ width: 12, height: 12 }}></div> <small>Current</small></div>
+                  <div className="d-flex align-items-center mb-2"><div className="bg-success me-2 rounded" style={{ width: 12, height: 12 }}></div> <small>Answered</small></div>
+                  <div className="d-flex align-items-center mb-2"><div className="bg-warning me-2 rounded" style={{ width: 12, height: 12 }}></div> <small>Visited</small></div>
+                  <div className="d-flex align-items-center"><div className="border border-dark me-2 rounded" style={{ width: 12, height: 12 }}></div> <small>Not Visited</small></div>
                 </div>
               </Card.Body>
             </Card>
