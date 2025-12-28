@@ -52,7 +52,7 @@ function Register() {
       }
     });
 
-    axios.post("https://charanionlineexambejson.vercel.app/api/candidate/register", formData)
+    axios.post("https://charanionlineexambejson-eu5oprmqc.vercel.app/api/candidate/register", formData)
       .then(res => {
         const candidateId = res.data.id || res.data;
         localStorage.setItem("candidate", JSON.stringify({ id: candidateId, email: data.email }));
