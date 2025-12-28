@@ -2,7 +2,7 @@ import { Container, Card, Button, Navbar, Row, Col, Form, Table } from "react-bo
 import { useNavigate, useParams } from "react-router-dom";
 import { FaInfoCircle, FaClock, FaClipboardList } from "react-icons/fa";
 import { useState } from "react";
-import logo from "./Assets/charani logo.webp"; 
+import logo from "./Assets/charani logo bg.png"; 
 
 function Instructions() {
   const { candidateId } = useParams();
@@ -11,11 +11,27 @@ function Instructions() {
   
   const [isAgreed, setIsAgreed] = useState(false);
 
+  // Function to request fullscreen
+  const enterFullScreen = () => {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+      elem.msRequestFullscreen();
+    }
+  };
+
+  const handleStartExam = () => {
+    enterFullScreen(); // Trigger fullscreen on user click
+    navigate(`/exam/${candidateId}`); // Move to exam page
+  };
+
   if (!candidate) return <h3 className="text-center mt-5">Unauthorized Access</h3>;
 
   return (
     <div style={{ backgroundColor: "#f4f7f9", minHeight: "100vh" }}>
-      {/* Navbar Section */}
       <Navbar style={{ backgroundColor: "#3c20efff" }} variant="dark" className="shadow-sm mb-4">
         <Container>
           <Navbar.Brand className="d-flex align-items-center">
@@ -49,7 +65,6 @@ function Instructions() {
               </Card.Header>
               <Card.Body className="p-4 p-md-5">
                 
-                {/* Summary Badges */}
                 <div className="d-flex flex-wrap gap-3 mb-4">
                   <div className="px-3 py-2 bg-light rounded-pill border">
                     <FaClock className="me-2 text-primary" /> <b>Total Duration:</b> 60 Mins
@@ -59,7 +74,6 @@ function Instructions() {
                   </div>
                 </div>
 
-                {/* --- NEW SECTION TABLE --- */}
                 <section className="mb-5">
                   <h5 className="fw-bold mb-3 text-dark">Section-wise Breakdown</h5>
                   <Table responsive bordered hover className="text-center align-middle shadow-sm">
@@ -109,7 +123,7 @@ function Instructions() {
                       <ul className="lh-lg small">
                         <li>Ensure a stable internet connection.</li>
                         <li>Each question carries <b>1 mark</b>.</li>
-                        <li>Once you submit a section, you may not be able to return to it (depending on config).</li>
+                        <li>Once you submit a section, you may not be able to return to it.</li>
                         <li>Timer starts automatically.</li>
                       </ul>
                     </section>
@@ -127,7 +141,6 @@ function Instructions() {
                   </Col>
                 </Row>
 
-                {/* Agreement and Button */}
                 <div className="bg-light p-4 rounded-3 mb-4 border border-info">
                   <Form.Check 
                     type="checkbox"
@@ -146,7 +159,7 @@ function Instructions() {
                     className="px-5 py-3 fw-bold shadow-lg"
                     style={{ borderRadius: "12px", letterSpacing: "1px" }}
                     disabled={!isAgreed}
-                    onClick={() => navigate(`/exam/${candidateId}`)}
+                    onClick={handleStartExam}
                   >
                     I AM READY TO START
                   </Button>

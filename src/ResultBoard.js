@@ -26,6 +26,15 @@ const ResultBoard = () => {
         }
     };
 
+    // Handle Logout and Clear Inputs
+    const handleLogout = () => {
+        setIsAuthenticated(false);
+        setLoginEmail('');    // Clears email to show placeholder
+        setLoginPassword(''); // Clears password to show placeholder
+        setEmailFilter('');   // Optional: clear dashboard filters too
+        setPercentFilter(''); // Optional: clear dashboard filters too
+    };
+
     const fetchResults = async () => {
         if (!isAuthenticated) return;
         setLoading(true);
@@ -37,7 +46,10 @@ const ResultBoard = () => {
                     minPercentage: minPct
                 }
             });
-            setResults(response.data);
+            
+            // Sorting descending by percentage
+            const sortedResults = response.data.sort((a, b) => b.percentage - a.percentage);
+            setResults(sortedResults);
         } catch (error) {
             console.error("Error fetching results", error);
         } finally {
@@ -122,7 +134,7 @@ const ResultBoard = () => {
                         <img src={logo} alt="Logo" width="40" height="40" className="me-2 bg-white rounded-circle p-1" />
                         <span className="fw-bold">CHARANI INFOTECH</span>
                     </Navbar.Brand>
-                    <Button variant="outline-light" size="sm" onClick={() => setIsAuthenticated(false)}>Logout</Button>
+                    <Button variant="outline-light" size="sm" onClick={handleLogout}>Logout</Button>
                 </Container>
             </Navbar>
 
@@ -186,7 +198,7 @@ const ResultBoard = () => {
                                                 <td>{res.communicationCorrect}</td>
                                                 <td>{res.totalCorrect} / 60</td>
                                                 <td>
-                                                    <span  style={{fontSize: "0.9rem"}}>
+                                                    <span style={{fontSize: "0.9rem"}}>
                                                         {res.percentage}%
                                                     </span>
                                                 </td>
